@@ -1,0 +1,27 @@
+rules:
+  - id: base64-decode
+    patterns:
+      - pattern: base64.b64decode(...)
+    message: "Use of base64 decoding detected. This might indicate obfuscated code."
+    languages: [python]
+    severity: INFO
+
+  - id: encoded-commands
+    patterns:
+      - pattern: |
+          "==".decode(...)
+      - pattern: |
+          "base64".decode(...)
+    message: "Potential encoded command detected."
+    languages: [python]
+    severity: WARNING
+
+  - id: js-eval-with-encoded-data
+    patterns:
+      - pattern: |
+          eval(atob(...))
+      - pattern: |
+          eval(decodeURIComponent(...))
+    message: "Evaluation of decoded/deobfuscated content detected."
+    languages: [javascript, typescript]
+    severity: ERROR

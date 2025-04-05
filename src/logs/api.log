@@ -1,0 +1,8 @@
+2025-04-05 07:00:51,628 - api - INFO - root - Starting API server on 0.0.0.0:8000
+2025-04-05 07:02:10,730 - api - INFO - root - Starting API server on 0.0.0.0:8000
+2025-04-05 07:02:47,117 - api - INFO - root - Starting API server on 0.0.0.0:8000
+2025-04-05 07:03:01,566 - api - INFO - root - Starting API server on 0.0.0.0:8000
+2025-04-05 07:05:44,005 - api - INFO - api.routers.scan - Queued scan job 1613b7fb-e520-4870-83a9-123262b72155 for repository https://github.com/modelcontextprotocol/servers
+2025-04-05 07:05:44,005 - api - INFO - api.routers.scan - Queued scan job 1613b7fb-e520-4870-83a9-123262b72155 for repository https://github.com/modelcontextprotocol/servers
+2025-04-05 07:13:14,109 - api - INFO - api.routers.scan - Queued scan job 544107c9-a7b7-4d01-a599-e9f8864bea57 for repository https://github.com/modelcontextprotocol/servers
+2025-04-05 07:13:14,109 - api - INFO - api.routers.scan - Queued scan job 544107c9-a7b7-4d01-a599-e9f8864bea57 for repository https://github.com/modelcontextprotocol/servers

@@ -1,0 +1,27 @@
+rules:
+  - id: system-command-execution
+    patterns:
+      - pattern: os.system(...)
+      - pattern-not: os.system("...")
+      - pattern-not: os.system('...')
+    message: "Use of os.system() with dynamic input detected. This can lead to command injection."
+    languages: [python]
+    severity: ERROR
+
+  - id: subprocess-shell-injection
+    patterns:
+      - pattern: subprocess.call(..., shell=True, ...)
+      - pattern-not: subprocess.call("...", shell=True, ...)
+      - pattern-not: subprocess.call('...', shell=True, ...)
+    message: "Use of subprocess.call() with shell=True and dynamic input detected. This can lead to command injection."
+    languages: [python]
+    severity: ERROR
+
+  - id: js-exec-command
+    patterns:
+      - pattern: child_process.exec(...)
+      - pattern-not: child_process.exec("...")
+      - pattern-not: child_process.exec('...')
+    message: "Use of child_process.exec() with dynamic input detected. This can lead to command injection."
+    languages: [javascript, typescript]
+    severity: ERROR

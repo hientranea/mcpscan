@@ -1,8 +1,0 @@
-rules:
-  - id: extract-https-strings
-    languages: [python, javascript, typescript]
-    patterns:
-      - pattern: |
-          "https://$URL"
-    message: "Found an HTTPS URL"
-    severity: INFO

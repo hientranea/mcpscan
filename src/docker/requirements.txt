@@ -1,3 +1,0 @@
-semgrep>=1.41.0
-gitpython>=3.1.40
-pip-audit>=2.6.1

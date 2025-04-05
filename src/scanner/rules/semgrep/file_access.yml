@@ -1,0 +1,29 @@
+rules:
+  - id: dangerous-file-access
+    patterns:
+      - pattern: open($FILE, ...)
+      - pattern-not: open("...", ...)
+      - pattern-not: open('...', ...)
+    message: "Potentially unsafe file access. Make sure the filename is properly validated."
+    languages: [python]
+    severity: WARNING
+
+  - id: path-traversal
+    patterns:
+      - pattern: |
+          $PATH = "..." + $VAR + "..."
+          ...
+          open($PATH, ...)
+    message: "Potential path traversal vulnerability. Ensure proper path validation."
+    languages: [python]
+    severity: WARNING
+
+  - id: fs-module-path-traversal
+    patterns:
+      - pattern: |
+          fs.$METHOD($PATH, ...)
+      - pattern-not: fs.$METHOD("...", ...)
+      - pattern-not: fs.$METHOD('...', ...)
+    message: "Potential path traversal in fs module. Ensure proper path validation."
+    languages: [javascript, typescript]
+    severity: WARNING

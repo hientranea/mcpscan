@@ -1,0 +1,32 @@
+rules:
+  - id: dangerous-eval
+    pattern: eval(...)
+    message: "Use of eval() detected. This can be dangerous if used with untrusted input."
+    languages: [python, javascript, typescript]
+    severity: ERROR
+
+  - id: dangerous-exec
+    pattern: exec(...)
+    message: "Use of exec() detected. This can be dangerous if used with untrusted input."
+    languages: [python]
+    severity: ERROR
+
+  - id: dangerous-pickle
+    patterns:
+      - pattern: pickle.loads(...)
+      - pattern: cPickle.loads(...)
+    message: "Use of pickle.loads() detected. This can lead to remote code execution if used with untrusted input."
+    languages: [python]
+    severity: ERROR
+
+  - id: dangerous-yaml-load
+    pattern: yaml.load(...)
+    message: "Use of yaml.load() detected. This can lead to remote code execution. Use yaml.safe_load() instead."
+    languages: [python]
+    severity: ERROR
+
+  - id: dangerous-shell-true
+    pattern: subprocess.$FUNC(..., shell=True, ...)
+    message: "Use of subprocess with shell=True detected. This can be dangerous if used with untrusted input."
+    languages: [python]
+    severity: ERROR

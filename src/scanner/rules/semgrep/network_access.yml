@@ -1,0 +1,24 @@
+rules:
+  - id: insecure-requests
+    patterns:
+      - pattern: requests.$METHOD(..., verify=False, ...)
+    message: "Insecure request with SSL verification disabled."
+    languages: [python]
+    severity: ERROR
+
+  - id: insecure-urllib3
+    patterns:
+      - pattern: urllib3.disable_warnings(...)
+    message: "Insecure SSL warnings disabled."
+    languages: [python]
+    severity: ERROR
+
+  - id: hardcoded-http-url
+    patterns:
+      - pattern: |
+          $URL = "http://..."
+      - pattern-not: $URL = "http://localhost..."
+      - pattern-not: $URL = "http://127.0.0.1..."
+    message: "Hardcoded HTTP URL (non-secure) detected."
+    languages: [python, javascript, typescript]
+    severity: WARNING

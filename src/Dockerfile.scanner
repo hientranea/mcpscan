@@ -1,0 +1,33 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install git and other dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    git \
+    curl \
+    nodejs \
+    npm \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install semgrep
+RUN pip install --no-cache-dir semgrep
+
+# Install dependencies
+COPY requirements.scanner.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy source code
+COPY shared/ /app/shared/
+COPY scanner/ /app/scanner/
+
+# Create directories
+RUN mkdir -p /app/logs /app/results/combined /tmp/mcpscan/working
+
+# Set environment variables
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+
+# Run the scanner
+CMD ["python", "-m", "scanner.main"]
