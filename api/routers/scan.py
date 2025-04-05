@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from shared.db.redis_client import RedisClient
-from shared.models import ScanRequest, ScanResponse, ScanResult, ScanStatus
+from shared.models import ScanRequest, ScanResponse, ScanResult, ScanStatus, ScanResultSummary
 from shared.utils.helpers import generate_job_id, get_timestamp
-from api.services.scan_service import ScanService
 from api.dependencies import get_redis_client
 import logging
+from datetime import datetime
 
 router = APIRouter(prefix="/api/scan", tags=["scan"])
 logger = logging.getLogger(__name__)
@@ -54,22 +54,35 @@ async def get_scan_status(
         raise HTTPException(status_code=404, detail="Job not found")
 
     try:
+        # Convert string timestamps to datetime objects
+        created_at = job_data["created_at"]
+        if isinstance(created_at, str):
+            created_at = datetime.fromisoformat(created_at)
+        
+        completed_at = None
+        if "completed_at" in job_data and job_data["completed_at"]:
+            completed_at = job_data["completed_at"]
+            if isinstance(completed_at, str):
+                completed_at = datetime.fromisoformat(completed_at)
+        
         # Convert to ScanResult model
         result = ScanResult(
             job_id=job_id,
             status=job_data["status"],
             repo_url=job_data["repo_url"],
-            created_at=job_data["created_at"],
+            created_at=created_at,
+            completed_at=completed_at
         )
 
-        # Add completed_at if available
-        if "completed_at" in job_data:
-            result.completed_at = job_data["completed_at"]
-
         # Add results if available
-        if job_data["status"] == ScanStatus.COMPLETED and "results" in job_data:
+        if job_data["status"] == ScanStatus.COMPLETED and "results" in job_data and job_data["results"]:
             result.score = job_data["results"].get("score")
-            result.summary = job_data["results"].get("summary")
+            
+            # Convert summary dict to ScanResultSummary object
+            summary_data = job_data["results"].get("summary")
+            if summary_data:
+                result.summary = ScanResultSummary(**summary_data)
+                
             result.raw_results = job_data["results"].get("raw_results")
 
         # Add error if available
@@ -78,5 +91,5 @@ async def get_scan_status(
 
         return result
     except Exception as e:
-        logger.error(f"Error processing job data: {str(e)}")
-        raise HTTPException(status_code=500, detail="Error processing job data")
+        logger.error(f"Error processing job data: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error processing job data: {str(e)}")
