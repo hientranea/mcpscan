@@ -1,144 +1,159 @@
-# MCPScan
+# MSeeP Scanner
 
-This repository is archived. I started this as an experiment to work with Aider, but did not make enough progress to make it useful.
-It will currently clone a repo in a docker container, then run semgrep rules and dependancy scans. I did not do enough
-testing or output formatting to rely on this, but it may be a good starting point for someone else.
+A security scanning and trust scoring system for MCP (Model Context Protocol) packages.
 
-A specialized security scanning tool for Model Context Protocol (MCP) servers. MCPScan performs comprehensive security analysis of MCP server implementations using multiple scanning tools:
-- Semgrep for code pattern analysis
-- npm audit for JavaScript/Node.js dependencies
-- pip-audit for Python dependencies
+## Overview
+
+MCP Scanner is a robust security analysis tool designed to evaluate GitHub repositories, particularly those containing MCP packages. It performs comprehensive security scans including static code analysis and dependency vulnerability assessment to calculate a trust score for each package.
+
+The system consists of two main components:
+
+- **API Service**: A FastAPI-based REST API for submitting scan requests and retrieving results
+- **Scanner Service**: A background service that performs the actual scanning and analysis
 
 ## Features
 
-- Automated MCP server repository cloning and scanning
-- Multi-tool security analysis tailored for MCP servers:
-  - Static code analysis with Semgrep rules for:
-    - Dangerous code patterns that could compromise model context
-    - Local file access vulnerabilities
-    - Network access security
-    - Obfuscated code detection
-    - Process execution monitoring
-    - HTTP/HTTPS endpoint analysis
-  - Dependency vulnerability scanning:
-    - Python package vulnerabilities via pip-audit
-    - JavaScript package vulnerabilities via npm audit
-- Automatic MCP server framework detection
-- Results aggregation and reporting in JSON format
-- Docker containerization for isolated scanning
-- Automatic cleanup of temporary files
+- **Repository Analysis**: Clone and analyze GitHub repositories
+- **Static Code Analysis**: Detect potentially dangerous code patterns using Semgrep
+- **Dependency Scanning**: Identify vulnerabilities in npm and pip dependencies
+- **Trust Scoring**: Calculate a security score based on findings
 
-## Prerequisites
+## Architecture
 
-- Docker installed and running
-- Python 3.x (for running MCP-Get scanner)
-- Internet connection for repository cloning and package list fetching
+The system uses a microservices architecture with the following components:
 
-## Installation
+- **API Service**: Handles HTTP requests and responses
+- **Scanner Service**: Performs security analysis
+- **Redis**: Used for job queuing and result storage
+- **Docker**: Containerization for easy deployment
 
-1. Clone this repository
-2. Build the Docker container:
+## Getting Started
+
+### Prerequisites
+
+- Docker and Docker Compose
+- Git
+
+### Installation
+
+1. Clone the repository:
+
+   ```bash
+   git clone github_url
+   cd mcpscan
+   ```
+
+2. Build and start the services:
+
+   ```bash
+   docker-compose build
+   docker-compose up -d
+   ```
+
+3. Verify the services are running:
+   ```bash
+   docker-compose ps
+   ```
+
+### Usage
+
+#### Starting a Scan
+
+To start a scan, send a POST request to the `/api/scan` endpoint:
+
 ```bash
-./src/docker_build.sh
+curl -X POST http://localhost:8000/api/scan/ \
+  -H "Content-Type: application/json" \
+  -d '{"repo_url": "https://github.com/username/repository"}'
 ```
 
-## Usage
+Response:
 
-### Scanning a Single Repository
-
-```bash
-./src/docker_run_one.sh <repository-url>
+```json
+{
+  "job_id": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "queued",
+  "message": "Scan job queued successfully"
+}
 ```
 
-Example:
-```bash
-./src/docker_run_one.sh "https://github.com/modelcontextprotocol/servers"
-```
+#### Checking Scan Results
 
-### Scanning All Servers in the MCP Get repo
+To check the status and results of a scan, send a GET request to the `/api/scan/{job_id}` endpoint:
 
 ```bash
-python3 src/docker_run_mcp_get.py
+curl http://localhost:8000/api/scan/550e8400-e29b-41d4-a716-446655440000
 ```
 
-This will:
-1. Fetch the MCP server list from MCP-Get
-2. Clone each MCP server repository
-3. Run comprehensive security scans
-4. Save detailed analysis to the `results` directory
+#### API Documentation
 
-## Output
+FastAPI provides automatic API documentation. You can access it at:
 
-Results are processed through multiple stages:
-1. Individual scan results are saved to the `results` directory:
-   - Semgrep analysis results
-   - Package vulnerability scans (pip-audit/npm audit)
-2. Results are combined into a single JSON file in `results/combined`
-3. Final reduced results in `results/reduced`:
-   - JSON summary with findings by rule
-   - Detailed vulnerability information
-   - Human-readable text report
-   - Simplified format for easy parsing
-
-The reduced results include:
-- Total findings count
-- Findings categorized by rule type
-- Dependencies scan summary with vulnerability counts
-- Detailed vulnerability information for each package
-- Code analysis findings with file locations and snippets
+```
+http://localhost:8000/docs
+```
 
 ## Project Structure
 
-- `src/docker/semgrep_rules/` - Custom Semgrep rule definitions
-- `src/docker/` - Core scanning logic and utilities
-  - `package_scan.py` - Dependency vulnerability scanning
-  - `cleanup.py` - Temporary file management
-  - Other scanning utilities
-- `results/` - Scan output directory (created during execution)
+```
+mcpscan/
+├── api/                  # API service
+│   ├── main.py           # FastAPI application
+│   ├── models.py         # Pydantic models
+│   ├── routers/          # API routes
+│   └── services/         # API services
+├── scanner/              # Scanner service
+│   ├── analyzers/        # Code analyzers
+│   ├── rules/            # Semgrep rules
+│   ├── services/         # Scanner services
+│   └── main.py           # Scanner entry point
+├── shared/               # Shared code
+│   ├── config.py         # Configuration
+│   ├── db/               # Database clients
+│   ├── models.py         # Shared data models
+│   └── utils/            # Utility functions
+├── docker-compose.yml    # Docker Compose configuration
+├── Dockerfile.api        # API Dockerfile
+└── Dockerfile.scanner    # Scanner Dockerfile
+```
 
-## Dependencies
+### Adding New Analyzers
 
-This project relies on:
+To add a new analyzer:
 
-- Docker
-- Python 3.x
-- Semgrep (installed in Docker container)
-- pip-audit (installed during scanning)
-- npm (for JavaScript projects)
-- Requests library for Python
+1. Create a new file in `scanner/analyzers/` that extends the `BaseAnalyzer` class
+2. Implement the `analyze` method
+3. Update the `ScanService` class to use your new analyzer
 
-## Third-Party Attributions
+Example:
 
-- [Semgrep](https://semgrep.dev/) - Static analysis tool (OSS License)
-- [pip-audit](https://pypi.org/project/pip-audit/) - Python dependency scanner (Apache 2.0)
-- [npm audit](https://docs.npmjs.com/cli/v8/commands/npm-audit) - Node.js dependency scanner
-- [Requests](https://requests.readthedocs.io/) - HTTP library for Python (Apache 2.0)
-- [MCP-Get](https://github.com/michaellatman/mcp-get) - Package list source
+```python
+from scanner.analyzers.base_analyzer import BaseAnalyzer
 
-## License
+class MyNewAnalyzer(BaseAnalyzer):
+    def analyze(self, working_dir):
+        # Implement your analysis logic
+        return {
+            "results": [],
+            "errors": []
+        }
+```
 
-This project is licensed under the Mozilla Public License Version 2.0. See the [LICENSE](LICENSE) file for details.
+### Adding New Semgrep Rules
 
-## Contributing
+To add new Semgrep rules:
 
-[Add contribution guidelines here]
+1. Create a new YAML file in `scanner/rules/semgrep/`
+2. Define your rules following the Semgrep format
+3. The scanner will automatically pick up and use the new rules
 
-## Output Structure
+Example rule file:
 
-Scan results are organized in three stages:
-1. Individual scan results in `results/`
-2. Combined results in `results/combined/`
-3. Reduced results in `results/reduced/` containing:
-   - Summary of findings by rule type
-   - Detailed vulnerability information
-   - Simplified findings format
-   - Human-readable text report
-
-## TODO
-
-- [x] Reduce the output jsons to a single representation
-- [ ] Add support for go
-- [x] Add result caching, store last tested hash for a repo
-- [ ] More tests and scans
-- [ ] Add severity scoring system
-- [ ] Implement parallel scanning for multiple repositories
+```yaml
+rules:
+  - id: my-new-rule
+    pattern: dangerous_function(...)
+    message: "Use of dangerous_function detected"
+    languages: [python]
+    severity: WARNING
+```
