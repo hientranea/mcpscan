@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Dict, List, Optional, Any, Union
+from typing import Dict, Optional, Any
 from pydantic import BaseModel, HttpUrl
 from datetime import datetime
 
@@ -43,31 +43,4 @@ class ScanResult(BaseModel):
     score: Optional[int] = None
     summary: Optional[ScanResultSummary] = None
     raw_results: Optional[Dict[str, Any]] = None
-    error: Optional[str] = None
-
-
-class SemgrepFinding(BaseModel):
-    rule_id: str
-    message: str
-    path: str
-    line: int
-    severity: str
-
-
-class DependencyVulnerability(BaseModel):
-    package_name: str
-    vulnerable_version: str
-    fixed_version: Optional[str]
-    severity: str
-    description: str
-    references: List[str]
-
-
-class ScanJob(BaseModel):
-    job_id: str
-    repo_url: HttpUrl
-    status: ScanStatus
-    created_at: datetime
-    completed_at: Optional[datetime] = None
-    results: Optional[Dict[str, Any]] = None
     error: Optional[str] = None

@@ -1,68 +1,108 @@
+version: '3.8'
+
 services:
+  db:
+    image: postgres:14
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: mcpscan
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  
   redis:
-    image: redis:7-alpine
+    image: redis:7
     ports:
       - "6379:6379"
     volumes:
-      - redis-data:/data
-    restart: unless-stopped
+      - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 30s
+      interval: 5s
       timeout: 5s
-      retries: 3
-      start_period: 5s
-    networks:
-      - mcpscan-network
+      retries: 5
 
   api:
     build:
       context: .
       dockerfile: Dockerfile.api
-    ports:
-      - "8000:8000"
-    environment:
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_DB=0
     depends_on:
+      db:
+        condition: service_healthy
       redis:
         condition: service_healthy
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=mcpscan
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+    ports:
+      - "8000:8000"
     volumes:
       # Mount code directories for auto-update during development
       - ./shared:/app/shared:ro
       - ./api:/app/api:ro
+      - ./migrations:/app/migrations
       - ./results:/app/results
       - ./logs:/app/logs
+      - ./scripts:/app/scripts:ro
     restart: unless-stopped
-    networks:
-      - mcpscan-network
-    command: ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
-  scanner:
+  celery_worker:
     build:
       context: .
       dockerfile: Dockerfile.scanner
-    environment:
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_DB=0
+    command: celery -A shared.celery_app worker --loglevel=info
     depends_on:
+      db:
+        condition: service_healthy
       redis:
         condition: service_healthy
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=mcpscan
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
     volumes:
-      # Mount code directories for auto-update during development
-      - ./shared:/app/shared:ro
-      - ./scanner:/app/scanner:ro
       - ./results:/app/results
-      - ./logs:/app/logs
-    restart: unless-stopped
-    networks:
-      - mcpscan-network
+      - ./scanner:/app/scanner
+      - ./shared:/app/shared
+      - ./scanner/rules:/app/scanner/rules
+
+  celery_beat:
+    build:
+      context: .
+      dockerfile: Dockerfile.scanner
+    command: celery -A shared.celery_app beat --loglevel=info
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=mcpscan
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
 
 volumes:
-  redis-data:
-
-networks:
-  mcpscan-network:
-    driver: bridge
+  postgres_data:
+  redis_data:

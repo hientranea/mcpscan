@@ -3,3 +3,7 @@ pydantic==2.11.2
 pydantic-settings==2.8.1
 requests==2.32.3
 gitpython==3.1.44
+sqlmodel==0.0.24
+psycopg2-binary==2.9.10
+celery>=5.5.0
+# semgrep>=1.15.0

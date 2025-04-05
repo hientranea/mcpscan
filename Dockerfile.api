@@ -18,7 +18,11 @@ FROM python:3.11-slim-bullseye
 RUN groupadd -g 1001 appuser && \
     useradd -u 1001 -g appuser -m -s /bin/bash appuser && \
     mkdir -p /app/logs && \
-    chown -R appuser:appuser /app
+    chown -R appuser:appuser /app && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends netcat-openbsd && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -30,12 +34,18 @@ ENV PYTHONPATH=/app \
 # Copy only the installed dependencies from the builder stage
 COPY --from=builder --chown=appuser:appuser /root/.local /home/appuser/.local
 
+# Create startup script
+COPY --chown=appuser:appuser ./scripts/start_api.sh /app/start_api.sh
+RUN chmod +x /app/start_api.sh
+
 # Switch to non-root user
 USER appuser
 
 # Copy application code - these will be mounted as volumes in docker-compose
 # for development to enable auto-updates
 COPY --chown=appuser:appuser shared/ /app/shared/
+COPY --chown=appuser:appuser migrations/ /app/migrations/
+COPY --chown=appuser:appuser alembic.ini /app/alembic.ini
 COPY --chown=appuser:appuser api/ /app/api/
 
 # Expose port
@@ -45,5 +55,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Run the application with a proper signal handling for graceful shutdown
-CMD ["python", "-m", "api.main"]
+# Run the startup script
+CMD ["/app/start_api.sh"]

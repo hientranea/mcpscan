@@ -9,11 +9,6 @@ def generate_job_id() -> str:
     return str(uuid.uuid4())
 
 
-def get_timestamp() -> str:
-    """Get current timestamp in ISO format"""
-    return datetime.utcnow().isoformat()
-
-
 def ensure_directory(directory: str) -> None:
     """Ensure a directory exists, create it if it doesn't"""
     os.makedirs(directory, exist_ok=True)

@@ -24,6 +24,20 @@ class Settings(BaseSettings):
     # Result expiration (in seconds)
     RESULT_EXPIRATION: int = 60 * 60 * 24 * 7  # 7 days
 
+    # Database settings
+    DB_HOST: str = os.getenv("DB_HOST", "localhost")
+    DB_PORT: str = os.getenv("DB_PORT", "5432")
+    DB_USER: str = os.getenv("DB_USER", "postgres")
+    DB_PASSWORD: str = os.getenv("DB_PASSWORD", "postgres")
+    DB_NAME: str = os.getenv("DB_NAME", "mcpscan")
+    DB_ECHO: bool = os.getenv("DB_ECHO", "False").lower() == "true"
+
+    # Celery settings
+    CELERY_BROKER_URL: str = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
+    CELERY_RESULT_BACKEND: str = os.getenv(
+        "CELERY_RESULT_BACKEND", "redis://localhost:6379/0"
+    )
+
     class Config:
         env_file = ".env"
 
