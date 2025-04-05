@@ -5,11 +5,15 @@ import threading
 import json
 import subprocess
 from datetime import datetime
+import redis
 
 app = Flask(__name__)
 
-# In-memory storage for scan results (could be replaced with Redis/DB in production)
-scan_jobs = {}
+# Configure Redis connection
+redis_host = os.environ.get("REDIS_HOST", "redis")
+redis_port = int(os.environ.get("REDIS_PORT", 6379))
+redis_db = int(os.environ.get("REDIS_DB", 0))
+redis_client = redis.Redis(host=redis_host, port=redis_port, db=redis_db)
 
 
 @app.route("/api/scan", methods=["POST"])
@@ -23,13 +27,14 @@ def start_scan():
     # Generate unique job ID
     job_id = str(uuid.uuid4())
 
-    # Store job info
-    scan_jobs[job_id] = {
+    # Store job info in Redis
+    job_data = {
         "status": "queued",
         "repo_url": repo_url,
         "created_at": datetime.now().isoformat(),
         "results": None,
     }
+    redis_client.set(f"job:{job_id}", json.dumps(job_data))
 
     # Start scan in background thread
     threading.Thread(target=run_scan, args=(job_id, repo_url)).start()
@@ -45,12 +50,12 @@ def start_scan():
 
 @app.route("/api/scan/<job_id>", methods=["GET"])
 def get_scan_status(job_id):
-    print(">>>>")
-    print(scan_jobs)
-    if job_id not in scan_jobs:
+    # Get job data from Redis
+    job_data = redis_client.get(f"job:{job_id}")
+    if not job_data:
         return jsonify({"error": "Job not found"}), 404
 
-    job = scan_jobs[job_id]
+    job = json.loads(job_data)
     response = {
         "job_id": job_id,
         "status": job["status"],
@@ -68,7 +73,8 @@ def get_scan_status(job_id):
 def run_scan(job_id, repo_url):
     """Run the scan in a background process"""
     try:
-        scan_jobs[job_id]["status"] = "running"
+        # Update job status in Redis
+        update_job_status(job_id, "running")
 
         # Run the existing scan script
         result = subprocess.run(
@@ -81,11 +87,22 @@ def run_scan(job_id, repo_url):
         # Process results and calculate score
         results = process_scan_results(repo_url)
 
-        scan_jobs[job_id]["status"] = "completed"
-        scan_jobs[job_id]["results"] = results
+        # Update job status and results in Redis
+        update_job_status(job_id, "completed", results)
     except Exception as e:
-        scan_jobs[job_id]["status"] = "failed"
-        scan_jobs[job_id]["error"] = str(e)
+        # Update job status to failed in Redis
+        update_job_status(job_id, "failed", {"error": str(e)})
+
+
+def update_job_status(job_id, status, results=None):
+    """Update job status in Redis"""
+    job_data = redis_client.get(f"job:{job_id}")
+    if job_data:
+        job = json.loads(job_data)
+        job["status"] = status
+        if results:
+            job["results"] = results
+        redis_client.set(f"job:{job_id}", json.dumps(job))
 
 
 def process_scan_results(repo_url):
@@ -195,4 +212,4 @@ def generate_summary(scan_data, score):
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=6000)
