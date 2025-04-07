@@ -70,7 +70,9 @@ class ScanService:
             logger.info(f"Saved combined results to {result_file}")
 
             # Calculate score
-            score_data = self.score_service.calculate_score(combined_results)
+            score_data = self.score_service.calculate_score(
+                combined_results, working_dir=repo_dir
+            )
 
             # Return results with score
             return {

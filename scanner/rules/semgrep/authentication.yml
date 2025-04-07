@@ -1,0 +1,42 @@
+rules:
+  - id: hardcoded-credentials
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $PASSWORD = "..."
+          - pattern: |
+              $SECRET = "..."
+          - pattern: |
+              $KEY = "..."
+          - pattern: |
+              $TOKEN = "..."
+      - pattern-not: |
+          $VAR = ""
+      - pattern-not: |
+          $VAR = "placeholder"
+      - pattern-not: |
+          $VAR = "dummy"
+    message: "Hardcoded credential detected. Store secrets in environment variables or a secure vault."
+    languages: [python, javascript, typescript]
+    severity: ERROR
+
+  - id: weak-jwt-verification
+    patterns:
+      - pattern-either:
+          - pattern: |
+              jwt.verify($TOKEN, $SECRET, {algorithms: ["none"]})
+          - pattern: |
+              jwt.decode($TOKEN, $SECRET, {verify: false})
+    message: "Insecure JWT verification. Always verify tokens and don't use 'none' algorithm."
+    languages: [javascript, typescript]
+    severity: ERROR
+
+  - id: insecure-cookie
+    patterns:
+      - pattern: |
+          $COOKIE_OPTIONS = {..., secure: false, ...}
+      - pattern: |
+          $COOKIE_OPTIONS = {..., httpOnly: false, ...}
+    message: "Insecure cookie settings. Set secure and httpOnly flags for sensitive cookies."
+    languages: [javascript, typescript]
+    severity: WARNING

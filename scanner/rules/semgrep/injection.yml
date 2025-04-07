@@ -1,0 +1,35 @@
+rules:
+  - id: sql-injection
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $DB.query("... " + $VAR + " ...", ...)
+          - pattern: |
+              $DB.execute("... " + $VAR + " ...", ...)
+          - pattern: |
+              $CURSOR.execute("... " + $VAR + " ...", ...)
+      - pattern-not: |
+          $DB.$METHOD("...", ...)
+    message: "Potential SQL injection. Use parameterized queries instead of string concatenation."
+    languages: [python, javascript, typescript]
+    severity: ERROR
+
+  - id: nosql-injection
+    patterns:
+      - pattern: |
+          $COLLECTION.find({$FIELD: $VAR})
+      - pattern-not: |
+          $COLLECTION.find({$FIELD: ObjectId($VAR)})
+    message: "Potential NoSQL injection. Validate and sanitize user input."
+    languages: [javascript, typescript]
+    severity: ERROR
+
+  - id: template-injection
+    patterns:
+      - pattern: |
+          render_template_string($VAR)
+      - pattern: |
+          Template($VAR).render(...)
+    message: "Potential template injection. Don't render templates from user-controlled input."
+    languages: [python]
+    severity: ERROR
